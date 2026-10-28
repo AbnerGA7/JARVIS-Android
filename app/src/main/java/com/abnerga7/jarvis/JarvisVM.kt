@@ -1,7 +1,12 @@
 package com.abnerga7.jarvis
 
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.graphics.BitmapFactory
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -12,6 +17,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 import org.json.JSONObject
 
 data class Mensaje(val deMi: Boolean, val texto: String)
@@ -44,16 +50,45 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
     var aviso by mutableStateOf<String?>(null)
     var errorVincular by mutableStateOf<String?>(null)
         private set
+    var actualizacion by mutableStateOf<Actualizacion?>(null)
+        private set
 
-    private val voz = Voz(app) { hablando = it }
+    private val prefs = app.getSharedPreferences("jarvis", Context.MODE_PRIVATE)
+    private val principal = Handler(Looper.getMainLooper())
+    private var ultimaFueVoz = false
+
+    // ------------------------------------------------------------------ preferencias
+    var responderConVoz by mutableStateOf(prefs.getBoolean("con_voz", true))
+        private set
+    var conversacionContinua by mutableStateOf(prefs.getBoolean("continua", true))
+        private set
+    var velocidadVoz by mutableFloatStateOf(prefs.getFloat("velocidad", 1.05f))
+        private set
+    var tonoVoz by mutableFloatStateOf(prefs.getFloat("tono", 0.82f))
+        private set
+
+    fun cambiarResponderConVoz(v: Boolean) { responderConVoz = v; prefs.edit().putBoolean("con_voz", v).apply() }
+    fun cambiarConversacionContinua(v: Boolean) { conversacionContinua = v; prefs.edit().putBoolean("continua", v).apply() }
+    fun cambiarVelocidad(v: Float) { velocidadVoz = v; voz.velocidad = v; prefs.edit().putFloat("velocidad", v).apply() }
+    fun cambiarTono(v: Float) { tonoVoz = v; voz.tono = v; prefs.edit().putFloat("tono", v).apply() }
+    fun probarVoz() = voz.decir("Así sueno ahora, ${enlace.trato}. Todos los sistemas en línea.")
+
+    private val voz = Voz(app) { activo ->
+        hablando = activo
+        // conversación continua: al terminar de hablar, vuelve a escuchar si le hablaste por voz
+        if (!activo && conversacionContinua && ultimaFueVoz) {
+            principal.postDelayed({ if (!escuchando && !hablando && !pensando) alternarMicrofono() }, 350)
+        }
+    }
     private val oido = Oido(
         app,
         alNivel = { nivel = it },
-        alTexto = { enviar(it) },
+        alTexto = { ultimaFueVoz = true; enviar(it) },
         alTerminar = { error ->
             escuchando = false
             nivel = 0f
-            error?.let { aviso = it }
+            if (error != null && !ultimaFueVoz) aviso = error
+            if (error == null && !pensando) ultimaFueVoz = false
         },
     )
 
@@ -64,7 +99,34 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
     init {
         enlace.alCambiar = { conexion = it }
         if (!Cripto.autoprueba()) aviso = "Aviso: el cifrado no coincide con la PC."
+        voz.velocidad = velocidadVoz
+        voz.tono = tonoVoz
+        cargarHistorial()
         conectar()
+        viewModelScope.launch { actualizacion = Actualizaciones.buscar() }
+    }
+
+    // ------------------------------------------------------------------ historial
+    private fun cargarHistorial() {
+        try {
+            val datos = JSONArray(prefs.getString("historial", "[]"))
+            for (i in 0 until datos.length()) {
+                val m = datos.getJSONObject(i)
+                mensajes += Mensaje(m.optBoolean("yo"), m.optString("t"))
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun guardarHistorial() {
+        val datos = JSONArray()
+        mensajes.takeLast(80).forEach { datos.put(JSONObject().put("yo", it.deMi).put("t", it.texto)) }
+        prefs.edit().putString("historial", datos.toString()).apply()
+    }
+
+    fun borrarConversacion() {
+        mensajes.clear()
+        guardarHistorial()
     }
 
     fun conectar() {
@@ -115,7 +177,10 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
     fun enviar(texto: String, confirmado: Boolean = false) {
         val t = texto.trim()
         if (t.isEmpty()) return
-        if (!confirmado) mensajes += Mensaje(true, t)
+        if (!confirmado) {
+            mensajes += Mensaje(true, t)
+            guardarHistorial()
+        }
         viewModelScope.launch {
             pensando = true
             try {
@@ -159,7 +224,49 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
 
     private fun responder(texto: String, conVoz: Boolean) {
         mensajes += Mensaje(false, texto)
-        if (conVoz) voz.decir(texto)
+        guardarHistorial()
+        if (conVoz && responderConVoz) {
+            voz.decir(texto)
+        } else if (ultimaFueVoz && conversacionContinua) {
+            principal.postDelayed({ if (!escuchando) alternarMicrofono() }, 400)
+        }
+    }
+
+    // ------------------------------------------------------------------ portapapeles
+    fun enviarPortapapeles() {
+        val cm = getApplication<Application>().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val texto = cm.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)
+            ?.coerceToText(getApplication())?.toString().orEmpty()
+        if (texto.isBlank()) {
+            aviso = "Tu portapapeles está vacío."
+            return
+        }
+        viewModelScope.launch {
+            aviso = try {
+                val r = enlace.pedir("POST", "/api/portapapeles", JSONObject().put("texto", texto), 15_000)
+                r.json.optString("mensaje", "Copiado en la PC")
+            } catch (e: Exception) {
+                "No pude enviarlo a la PC."
+            }
+        }
+    }
+
+    fun traerPortapapeles() {
+        viewModelScope.launch {
+            try {
+                val r = enlace.pedir("GET", "/api/portapapeles", espera = 15_000)
+                val texto = r.json.optString("texto")
+                if (texto.isBlank()) {
+                    aviso = "El portapapeles de la PC está vacío."
+                } else {
+                    val cm = getApplication<Application>().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("JARVIS", texto))
+                    aviso = "Copiado en el celular: " + texto.take(40) + if (texto.length > 40) "…" else ""
+                }
+            } catch (e: Exception) {
+                aviso = "No pude traer el portapapeles de la PC."
+            }
+        }
     }
 
     // ------------------------------------------------------------------ control remoto
@@ -233,6 +340,12 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
                 aviso = "No pude cargar las apps de la PC."
             }
         }
+    }
+
+    fun copiar(texto: String) {
+        val cm = getApplication<Application>().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("JARVIS", texto))
+        aviso = "Copiado"
     }
 
     override fun onCleared() {
