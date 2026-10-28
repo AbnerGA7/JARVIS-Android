@@ -29,6 +29,11 @@
 | 🧩 **Apps de la PC** | Lista de todos los programas instalados para abrirlos con un toque |
 | 🌐 **Desde cualquier lugar** | Misma WiFi → conexión directa. Datos móviles → túnel seguro de Cloudflare |
 | 🔒 **Seguro** | Vinculación con código de un solo uso, token secreto de 256 bits y direcciones cifradas con AES-256-GCM |
+| 💬 **Conversación continua** | Después de responder te sigue escuchando; el chat se guarda |
+| 🔗 **Compartir con JARVIS** | Desde cualquier app: un enlace se abre en la PC, un texto se copia o se le pregunta |
+| 📋 **Portapapeles compartido** | Envía o trae texto copiado entre el celular y la PC |
+| ⚡ **Ajuste rápido** | Botón «JARVIS» en los ajustes rápidos para hablarle al instante |
+| ⬆️ **Actualizaciones** | Te avisa cuando hay una versión nueva |
 | 🤖 **Botón de asistente** | Se puede elegir como asistente digital de Android para abrirlo con el gesto del sistema |
 
 ## 🔗 Cómo se conecta
@@ -57,7 +62,7 @@ sequenceDiagram
 2. En la laptop: clic derecho en el reactor de JARVIS → **Conectar celular**.
 3. Escribe en la app el código que aparece en la PC (por ejemplo `K7P2-QX9M`). Listo.
 
-> Necesita JARVIS 2.3 o superior en la PC.
+> Necesita JARVIS 2.5 o superior en la PC (para el portapapeles y compartir).
 
 ## 🏗️ Estructura
 
@@ -70,6 +75,9 @@ sequenceDiagram
 | `JarvisVM.kt` | Estado de la app y lógica de conversación |
 | `ui/Tema.kt` | Colores, tipografía y el reactor animado |
 | `ui/Pantallas.kt` | Asistente, Control, Pantalla, Apps y Ajustes |
+| `CompartirActivity.kt` | «Compartir → JARVIS» desde otras apps |
+| `JarvisTile.kt` | Botón en los ajustes rápidos |
+| `Actualizaciones.kt` | Aviso de versiones nuevas (GitHub Releases) |
 
 ## 🛠️ Compilar
 

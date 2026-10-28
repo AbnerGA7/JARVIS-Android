@@ -69,4 +69,11 @@ jobs:
             2. Ábrelo y permite "Instalar apps desconocidas" para tu navegador cuando Android lo pida.
             3. En la laptop: clic derecho en el reactor de JARVIS → **Conectar celular**, y escribe el código en la app.
 
-            Funciona con la misma WiFi o con datos móviles. Requiere JARVIS 2.3 o superior en la PC.
+            Funciona con la misma WiFi o con datos móviles. Requiere JARVIS 2.5 o superior en la PC.
+
+            ## Novedades
+            - El chat se guarda y puedes seguir conversando por voz sin tocar nada.
+            - Compartir → JARVIS desde cualquier app.
+            - Portapapeles compartido con la PC.
+            - Botón JARVIS en los ajustes rápidos.
+            - Ajustes de voz (velocidad, tono, responder sin voz) y aviso de actualizaciones.
