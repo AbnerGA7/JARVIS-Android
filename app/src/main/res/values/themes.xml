@@ -5,4 +5,10 @@
         <item name="android:statusBarColor">@color/fondo</item>
         <item name="android:navigationBarColor">@color/fondo</item>
     </style>
+
+    <style name="Theme.Jarvis.Transparente" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
 </resources>
