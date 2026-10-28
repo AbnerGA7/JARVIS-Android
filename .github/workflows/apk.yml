@@ -72,6 +72,8 @@ jobs:
             Funciona con la misma WiFi o con datos móviles. Requiere JARVIS 2.5 o superior en la PC.
 
             ## Novedades
+            - Misma voz de mayordomo que en la PC (el celular le pide el audio a tu PC).
+            - Sin PC: elige la voz de Android de respaldo, ajustada a mayordomo.
             - El chat se guarda y puedes seguir conversando por voz sin tocar nada.
             - Compartir → JARVIS desde cualquier app.
             - Portapapeles compartido con la PC.

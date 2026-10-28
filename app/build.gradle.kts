@@ -14,7 +14,7 @@ android {
         targetSdk = 34
         // cada compilación en GitHub sube el número, así el celular acepta la actualización
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
-        versionName = "1.1"
+        versionName = "1.2"
     }
 
     signingConfigs {
