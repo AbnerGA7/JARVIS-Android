@@ -696,18 +696,56 @@ private fun Ajustes(vm: JarvisVM) {
             Spacer(Modifier.height(8.dp))
             FormularioCodigo(vm)
         }
-        Seccion("VOZ Y CONVERSACIÓN")
+        Seccion("VOZ DE JARVIS")
+        Interruptor("Usar la voz de JARVIS de mi PC", vm.usarVozDeLaPc) { vm.cambiarUsarVozDeLaPc(it) }
+        Text(
+            vm.nombreVozPc?.let { "Voz: ${nombreVozLegible(it)} · la misma que en tu PC (se cambia en el Centro de control)" }
+                ?: "Se usará la voz que elegiste en el Centro de control de tu PC.",
+            color = TextoTenue, fontSize = 12.sp,
+        )
         Interruptor("Responder con voz", vm.responderConVoz) { vm.cambiarResponderConVoz(it) }
         Interruptor("Conversación continua (te sigo escuchando)", vm.conversacionContinua) { vm.cambiarConversacionContinua(it) }
-        Text("Velocidad de la voz", color = TextoTenue, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-        Slider(value = vm.velocidadVoz, onValueChange = { vm.cambiarVelocidad(it) }, valueRange = 0.6f..1.6f,
-            colors = SliderDefaults.colors(thumbColor = Cian, activeTrackColor = Cian))
-        Text("Tono de la voz", color = TextoTenue, fontSize = 12.sp)
-        Slider(value = vm.tonoVoz, onValueChange = { vm.cambiarTono(it) }, valueRange = 0.6f..1.4f,
-            colors = SliderDefaults.colors(thumbColor = Cian, activeTrackColor = Cian))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = { vm.probarVoz() }) { Text("▶ PROBAR VOZ") }
             OutlinedButton(onClick = { vm.borrarConversacion() }) { Text("BORRAR CHAT") }
+        }
+        Seccion("VOZ SIN PC (RESPALDO)")
+        var elegirVoz by remember { mutableStateOf(false) }
+        Text("Cuando la PC no está disponible, JARVIS usa una voz de Android ajustada a mayordomo.",
+            color = TextoTenue, fontSize = 12.sp)
+        OutlinedButton(onClick = { elegirVoz = true }, modifier = Modifier.padding(top = 6.dp)) {
+            Text("VOZ: " + (vm.vozAndroid ?: "automática"), maxLines = 1)
+        }
+        Text("Velocidad", color = TextoTenue, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+        Slider(value = vm.velocidadVoz, onValueChange = { vm.cambiarVelocidad(it) }, valueRange = 0.6f..1.4f,
+            colors = SliderDefaults.colors(thumbColor = Cian, activeTrackColor = Cian))
+        Text("Tono (más bajo = más grave)", color = TextoTenue, fontSize = 12.sp)
+        Slider(value = vm.tonoVoz, onValueChange = { vm.cambiarTono(it) }, valueRange = 0.5f..1.3f,
+            colors = SliderDefaults.colors(thumbColor = Cian, activeTrackColor = Cian))
+        OutlinedButton(onClick = { vm.probarVozAndroid() }) { Text("▶ PROBAR VOZ SIN PC") }
+        if (elegirVoz) {
+            val voces = remember { vm.vocesAndroid() }
+            AlertDialog(
+                onDismissRequest = { elegirVoz = false },
+                containerColor = Panel,
+                title = { Text("VOZ DE RESPALDO", style = MaterialTheme3.titleMedium, color = Cian) },
+                text = {
+                    if (voces.isEmpty()) {
+                        Text("Tu celular no tiene voces en español. Instala «Servicios de voz de Google».", color = Texto)
+                    } else {
+                        LazyColumn(Modifier.height(360.dp)) {
+                            items(voces) { v ->
+                                Text(
+                                    "${v.locale.displayCountry} · ${v.name}" + if (v.isNetworkConnectionRequired) "  (internet)" else "",
+                                    color = if (v.name == vm.vozAndroid) Cian else Texto, fontSize = 14.sp,
+                                    modifier = Modifier.fillMaxWidth().clickable { vm.elegirVozAndroid(v.name) }.padding(vertical = 10.dp),
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { elegirVoz = false }) { Text("LISTO", color = Cian) } },
+            )
         }
         Seccion("MODO CELULAR (SIN PC)")
         FormularioGroq(vm)
@@ -737,6 +775,15 @@ private fun Ajustes(vm: JarvisVM) {
             color = TextoTenue, fontSize = 13.sp, lineHeight = 19.sp,
         )
     }
+}
+
+private fun nombreVozLegible(clave: String): String {
+    val partes = clave.split("-")
+    if (partes.size < 3) return clave
+    val nombre = partes.drop(2).joinToString("-").removeSuffix("Neural")
+    val pais = mapOf("MX" to "México", "PE" to "Perú", "ES" to "España", "CO" to "Colombia", "AR" to "Argentina",
+        "US" to "EE. UU.", "CL" to "Chile", "VE" to "Venezuela")[partes[1]] ?: partes[1]
+    return "$nombre ($pais)"
 }
 
 @Composable
