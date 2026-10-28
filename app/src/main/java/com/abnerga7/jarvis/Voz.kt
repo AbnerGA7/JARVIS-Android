@@ -32,7 +32,7 @@ import kotlin.coroutines.resume
 /**
  * Voz de JARVIS en el celular.
  * 1) La misma voz neural que la PC: el audio se lo pide a la PC (suena idéntico, con la misma velocidad y tono).
- * 2) Sin PC: el sintetizador de Android, con la voz en español elegida y ajustada a "mayordomo".
+ * 2) Sin PC: el sintetizador de Android, con la voz en español elegida y a velocidad normal, lo más parecida a la voz de la PC.
  * Habla frase por frase y prepara la siguiente mientras suena la actual.
  */
 class Voz(contexto: Context, private val alHablar: (Boolean) -> Unit) : TextToSpeech.OnInitListener {
@@ -49,9 +49,9 @@ class Voz(contexto: Context, private val alHablar: (Boolean) -> Unit) : TextToSp
     /** Pide a la PC el audio con la voz de JARVIS; devuelve null si la PC no está disponible. */
     var vozDeLaPc: (suspend (String) -> ByteArray?)? = null
 
-    var velocidad = 0.92f
+    var velocidad = 1.05f
         set(valor) { field = valor; if (lista) tts.setSpeechRate(valor) }
-    var tono = 0.78f
+    var tono = 0.82f
         set(valor) { field = valor; if (lista) tts.setPitch(valor) }
     var nombreVozAndroid: String? = null
         set(valor) { field = valor; if (lista) elegirVozAndroid() }

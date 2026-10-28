@@ -62,9 +62,9 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
         private set
     var conversacionContinua by mutableStateOf(prefs.getBoolean("continua", true))
         private set
-    var velocidadVoz by mutableFloatStateOf(prefs.getFloat("velocidad2", 0.92f))
+    var velocidadVoz by mutableFloatStateOf(prefs.getFloat("velocidad3", 1.05f))
         private set
-    var tonoVoz by mutableFloatStateOf(prefs.getFloat("tono2", 0.78f))
+    var tonoVoz by mutableFloatStateOf(prefs.getFloat("tono3", 0.82f))
         private set
     var usarVozDeLaPc by mutableStateOf(prefs.getBoolean("voz_pc", true))
         private set
@@ -75,8 +75,8 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
 
     fun cambiarResponderConVoz(v: Boolean) { responderConVoz = v; prefs.edit().putBoolean("con_voz", v).apply() }
     fun cambiarConversacionContinua(v: Boolean) { conversacionContinua = v; prefs.edit().putBoolean("continua", v).apply() }
-    fun cambiarVelocidad(v: Float) { velocidadVoz = v; voz.velocidad = v; prefs.edit().putFloat("velocidad2", v).apply() }
-    fun cambiarTono(v: Float) { tonoVoz = v; voz.tono = v; prefs.edit().putFloat("tono2", v).apply() }
+    fun cambiarVelocidad(v: Float) { velocidadVoz = v; voz.velocidad = v; prefs.edit().putFloat("velocidad3", v).apply() }
+    fun cambiarTono(v: Float) { tonoVoz = v; voz.tono = v; prefs.edit().putFloat("tono3", v).apply() }
     fun cambiarUsarVozDeLaPc(v: Boolean) { usarVozDeLaPc = v; prefs.edit().putBoolean("voz_pc", v).apply() }
     fun elegirVozAndroid(nombre: String) {
         vozAndroid = nombre

@@ -711,7 +711,7 @@ private fun Ajustes(vm: JarvisVM) {
         }
         Seccion("VOZ SIN PC (RESPALDO)")
         var elegirVoz by remember { mutableStateOf(false) }
-        Text("Cuando la PC no está disponible, JARVIS usa una voz de Android ajustada a mayordomo.",
+        Text("Cuando la PC no está disponible, JARVIS usa la voz de Android más parecida, a velocidad normal.",
             color = TextoTenue, fontSize = 12.sp)
         OutlinedButton(onClick = { elegirVoz = true }, modifier = Modifier.padding(top = 6.dp)) {
             Text("VOZ: " + (vm.vozAndroid ?: "automática"), maxLines = 1)
