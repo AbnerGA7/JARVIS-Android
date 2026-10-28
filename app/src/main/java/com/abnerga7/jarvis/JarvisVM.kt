@@ -62,16 +62,31 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
         private set
     var conversacionContinua by mutableStateOf(prefs.getBoolean("continua", true))
         private set
-    var velocidadVoz by mutableFloatStateOf(prefs.getFloat("velocidad", 1.05f))
+    var velocidadVoz by mutableFloatStateOf(prefs.getFloat("velocidad2", 0.92f))
         private set
-    var tonoVoz by mutableFloatStateOf(prefs.getFloat("tono", 0.82f))
+    var tonoVoz by mutableFloatStateOf(prefs.getFloat("tono2", 0.78f))
+        private set
+    var usarVozDeLaPc by mutableStateOf(prefs.getBoolean("voz_pc", true))
+        private set
+    var vozAndroid by mutableStateOf(prefs.getString("voz_android", null))
+        private set
+    var nombreVozPc by mutableStateOf(prefs.getString("voz_pc_nombre", null))
         private set
 
     fun cambiarResponderConVoz(v: Boolean) { responderConVoz = v; prefs.edit().putBoolean("con_voz", v).apply() }
     fun cambiarConversacionContinua(v: Boolean) { conversacionContinua = v; prefs.edit().putBoolean("continua", v).apply() }
-    fun cambiarVelocidad(v: Float) { velocidadVoz = v; voz.velocidad = v; prefs.edit().putFloat("velocidad", v).apply() }
-    fun cambiarTono(v: Float) { tonoVoz = v; voz.tono = v; prefs.edit().putFloat("tono", v).apply() }
-    fun probarVoz() = voz.decir("Así sueno ahora, ${enlace.trato}. Todos los sistemas en línea.")
+    fun cambiarVelocidad(v: Float) { velocidadVoz = v; voz.velocidad = v; prefs.edit().putFloat("velocidad2", v).apply() }
+    fun cambiarTono(v: Float) { tonoVoz = v; voz.tono = v; prefs.edit().putFloat("tono2", v).apply() }
+    fun cambiarUsarVozDeLaPc(v: Boolean) { usarVozDeLaPc = v; prefs.edit().putBoolean("voz_pc", v).apply() }
+    fun elegirVozAndroid(nombre: String) {
+        vozAndroid = nombre
+        voz.nombreVozAndroid = nombre
+        prefs.edit().putString("voz_android", nombre).apply()
+        voz.probarVozAndroid("A su servicio, ${enlace.trato}.")
+    }
+    fun vocesAndroid() = voz.vocesAndroid()
+    fun probarVoz() = voz.decir("A su servicio, ${enlace.trato}. Todos los sistemas en línea.")
+    fun probarVozAndroid() = voz.probarVozAndroid("Así sueno sin la PC, ${enlace.trato}.")
 
     private val voz = Voz(app) { activo ->
         hablando = activo
@@ -101,6 +116,16 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
         if (!Cripto.autoprueba()) aviso = "Aviso: el cifrado no coincide con la PC."
         voz.velocidad = velocidadVoz
         voz.tono = tonoVoz
+        voz.nombreVozAndroid = vozAndroid
+        // la misma voz de JARVIS que en la PC: el celular le pide el audio a la PC
+        voz.vozDeLaPc = { texto ->
+            if (usarVozDeLaPc && conectadoAPc) {
+                val r = enlace.pedir("POST", "/api/voz", JSONObject().put("texto", texto), 15_000)
+                if (r.codigo == 200 && r.cuerpo.size > 500) r.cuerpo else null
+            } else {
+                null
+            }
+        }
         cargarHistorial()
         conectar()
         viewModelScope.launch { actualizacion = Actualizaciones.buscar() }
@@ -130,7 +155,10 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
     }
 
     fun conectar() {
-        viewModelScope.launch { enlace.conectar() }
+        viewModelScope.launch {
+            enlace.conectar()
+            if (conectadoAPc) actualizarEstado()
+        }
     }
 
     fun vincular(codigo: String) {
@@ -294,7 +322,13 @@ class JarvisVM(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val r = enlace.pedir("GET", "/api/estado", espera = 8_000)
-                if (r.codigo == 200) estado = r.json
+                if (r.codigo == 200) {
+                    estado = r.json
+                    r.json.optString("voz").takeIf { it.isNotBlank() && it != "null" }?.let {
+                        nombreVozPc = it
+                        prefs.edit().putString("voz_pc_nombre", it).apply()
+                    }
+                }
             } catch (_: Exception) {
             }
         }
