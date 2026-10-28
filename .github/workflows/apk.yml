@@ -72,10 +72,9 @@ jobs:
             Funciona con la misma WiFi o con datos móviles. Requiere JARVIS 2.5 o superior en la PC.
 
             ## Novedades
-            - Misma voz de mayordomo que en la PC (el celular le pide el audio a tu PC).
-            - Sin PC: elige la voz de Android de respaldo, ajustada a mayordomo.
+            - Aprendizaje mutuo: JARVIS recuerda lo que le cuentas y lo que te enseña (todo se guarda en tu PC).
+            - Atajos en la pantalla principal: «¿Qué sabes de mí?», «¿Qué aprendimos hoy?» y «Hazme un repaso».
+            - La voz vuelve a su velocidad normal (y suena igual que en la PC, también si usas ElevenLabs).
+            - Misma voz que en la PC (el celular le pide el audio a tu PC) y voz de Android de respaldo sin PC.
             - El chat se guarda y puedes seguir conversando por voz sin tocar nada.
-            - Compartir → JARVIS desde cualquier app.
-            - Portapapeles compartido con la PC.
-            - Botón JARVIS en los ajustes rápidos.
-            - Ajustes de voz (velocidad, tono, responder sin voz) y aviso de actualizaciones.
+            - Compartir → JARVIS desde cualquier app, portapapeles compartido y botón en los ajustes rápidos.
