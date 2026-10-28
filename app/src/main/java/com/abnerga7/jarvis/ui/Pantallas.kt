@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -352,6 +353,21 @@ private fun Asistente(vm: JarvisVM, microfono: () -> Unit) {
                 "Toca el reactor o el micrófono y háblame.",
                 color = TextoTenue, fontSize = 14.sp, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp),
             )
+            // atajos para el aprendizaje mutuo: JARVIS aprende de ti y tú de él
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                listOf("¿Qué sabes de mí?", "¿Qué aprendimos hoy?", "Hazme un repaso", "¿Qué tengo para hoy?").forEach { atajo ->
+                    Text(
+                        atajo, color = Cian, fontSize = 13.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(50))
+                            .border(1.dp, Cian.copy(alpha = 0.6f), RoundedCornerShape(50))
+                            .clickable { vm.enviar(atajo) }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    )
+                }
+            }
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), state = lista) {
             items(vm.mensajes) { m -> Burbuja(m) { vm.copiar(m.texto) } }
