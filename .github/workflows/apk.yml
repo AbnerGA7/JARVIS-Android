@@ -1,0 +1,72 @@
+name: Compilar APK de JARVIS
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["README.md", "docs/**", "LICENSE"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compilar-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Leer la versión
+        id: version
+        run: echo "numero=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar el APK
+        run: |
+          set -o pipefail
+          gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: Mostrar errores de compilación
+        if: failure()
+        run: |
+          grep -E "^e: " build.log | head -10 | sed 's/^/::error::/' || true
+          grep -A4 "What went wrong" build.log | head -12 | sed 's/^/::error::/' || true
+
+      - name: Preparar el APK
+        run: cp app/build/outputs/apk/release/app-release.apk JARVIS.apk
+
+      - name: Guardar el APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-apk
+          path: JARVIS.apk
+
+      - name: Publicar en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.numero }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: JARVIS.apk
+          name: JARVIS para Android ${{ steps.version.outputs.numero }}
+          body: |
+            ## Instalación
+            1. Desde el celular, descarga **JARVIS.apk** (abajo, en *Assets*).
+            2. Ábrelo y permite "Instalar apps desconocidas" para tu navegador cuando Android lo pida.
+            3. En la laptop: clic derecho en el reactor de JARVIS → **Conectar celular**, y escribe el código en la app.
+
+            Funciona con la misma WiFi o con datos móviles. Requiere JARVIS 2.3 o superior en la PC.
