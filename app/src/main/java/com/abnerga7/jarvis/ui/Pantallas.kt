@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.abnerga7.jarvis.BuildConfig
 import com.abnerga7.jarvis.Conexion
 import com.abnerga7.jarvis.JarvisVM
 import com.abnerga7.jarvis.Mensaje
@@ -329,6 +331,7 @@ private fun Asistente(vm: JarvisVM, microfono: () -> Unit) {
         else -> "EN ESPERA"
     }
     Column(Modifier.fillMaxSize()) {
+        AvisoActualizacion(vm)
         Box(Modifier.fillMaxWidth().height(if (vm.mensajes.isEmpty()) 300.dp else 190.dp), contentAlignment = Alignment.Center) {
             Reactor(
                 nivel = if (vm.escuchando) vm.nivel else if (vm.hablando) 0.45f else 0f,
@@ -336,7 +339,14 @@ private fun Asistente(vm: JarvisVM, microfono: () -> Unit) {
                 modifier = Modifier.size(if (vm.mensajes.isEmpty()) 250.dp else 160.dp).clickable { microfono() },
             )
         }
-        Text(estado, style = MaterialTheme3.labelSmall, color = color, modifier = Modifier.align(Alignment.CenterHorizontally))
+        Box(Modifier.fillMaxWidth()) {
+            Text(estado, style = MaterialTheme3.labelSmall, color = color, modifier = Modifier.align(Alignment.Center))
+            if (vm.mensajes.isNotEmpty()) {
+                IconButton(onClick = { vm.borrarConversacion() }, modifier = Modifier.align(Alignment.CenterEnd).size(36.dp)) {
+                    Icon(Icons.Filled.DeleteSweep, "Borrar conversación", tint = TextoTenue)
+                }
+            }
+        }
         if (vm.mensajes.isEmpty()) {
             Text(
                 "Toca el reactor o el micrófono y háblame.",
@@ -344,7 +354,7 @@ private fun Asistente(vm: JarvisVM, microfono: () -> Unit) {
             )
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp), state = lista) {
-            items(vm.mensajes) { m -> Burbuja(m) }
+            items(vm.mensajes) { m -> Burbuja(m) { vm.copiar(m.texto) } }
         }
         if (vm.conectadoAPc) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -378,10 +388,27 @@ private fun Asistente(vm: JarvisVM, microfono: () -> Unit) {
 }
 
 @Composable
-private fun Burbuja(m: Mensaje) {
+private fun AvisoActualizacion(vm: JarvisVM) {
+    val act = vm.actualizacion ?: return
+    val abrir = LocalUriHandler.current
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
+            .background(Dorado.copy(alpha = 0.15f)).border(1.dp, Dorado, RoundedCornerShape(12.dp))
+            .clickable { abrir.openUri(act.url) }.padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.SystemUpdate, null, tint = Dorado)
+        Spacer(Modifier.width(10.dp))
+        Text("Nueva versión ${act.version} disponible · toca para descargar", color = Dorado, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun Burbuja(m: Mensaje, alMantener: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = if (m.deMi) Arrangement.End else Arrangement.Start) {
         Column(
             Modifier.fillMaxWidth(0.85f).clip(RoundedCornerShape(14.dp))
+                .pointerInput(m) { detectTapGestures(onLongPress = { alMantener() }) }
                 .background(if (m.deMi) Color(0xFF0B2E40) else Panel)
                 .border(1.dp, if (m.deMi) Color(0xFF145A73) else Color(0xFF1E4A5C), RoundedCornerShape(14.dp))
                 .padding(12.dp),
@@ -447,6 +474,20 @@ private fun Control(vm: JarvisVM) {
                 colors = SliderDefaults.colors(thumbColor = Cian, activeTrackColor = Cian),
                 modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
             )
+        }
+
+        Seccion("PORTAPAPELES")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = { vm.enviarPortapapeles() }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.ContentPaste, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("A LA PC", fontSize = 12.sp)
+            }
+            OutlinedButton(onClick = { vm.traerPortapapeles() }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Filled.ContentCopy, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("DE LA PC", fontSize = 12.sp)
+            }
         }
 
         Seccion("ACCIONES")
@@ -655,8 +696,38 @@ private fun Ajustes(vm: JarvisVM) {
             Spacer(Modifier.height(8.dp))
             FormularioCodigo(vm)
         }
+        Seccion("VOZ Y CONVERSACIÓN")
+        Interruptor("Responder con voz", vm.responderConVoz) { vm.cambiarResponderConVoz(it) }
+        Interruptor("Conversación continua (te sigo escuchando)", vm.conversacionContinua) { vm.cambiarConversacionContinua(it) }
+        Text("Velocidad de la voz", color = TextoTenue, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+        Slider(value = vm.velocidadVoz, onValueChange = { vm.cambiarVelocidad(it) }, valueRange = 0.6f..1.6f,
+            colors = SliderDefaults.colors(thumbColor = Cian, activeTrackColor = Cian))
+        Text("Tono de la voz", color = TextoTenue, fontSize = 12.sp)
+        Slider(value = vm.tonoVoz, onValueChange = { vm.cambiarTono(it) }, valueRange = 0.6f..1.4f,
+            colors = SliderDefaults.colors(thumbColor = Cian, activeTrackColor = Cian))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = { vm.probarVoz() }) { Text("▶ PROBAR VOZ") }
+            OutlinedButton(onClick = { vm.borrarConversacion() }) { Text("BORRAR CHAT") }
+        }
         Seccion("MODO CELULAR (SIN PC)")
         FormularioGroq(vm)
+        Seccion("VERSIÓN")
+        Text("JARVIS para Android ${BuildConfig.VERSION_NAME}", color = Texto)
+        vm.actualizacion?.let { act ->
+            val abrir = LocalUriHandler.current
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { abrir.openUri(act.url) },
+                colors = ButtonDefaults.buttonColors(containerColor = Dorado, contentColor = Color.Black)) {
+                Text("DESCARGAR LA VERSIÓN ${act.version}")
+            }
+        } ?: Text("Tienes la última versión.", color = TextoTenue, fontSize = 13.sp)
+        Seccion("ATAJOS")
+        Text(
+            "• Ajustes rápidos: edita el panel de ajustes rápidos y arrastra el botón «JARVIS» para hablarle con un toque.\n" +
+                "• Compartir: desde cualquier app, Compartir → JARVIS para abrir un enlace en la PC o preguntarle algo.\n" +
+                "• Mantén presionado un mensaje del chat para copiarlo.",
+            color = TextoTenue, fontSize = 13.sp, lineHeight = 19.sp,
+        )
         Seccion("CÓMO FUNCIONA")
         Text(
             "• En la misma WiFi el celular habla directo con la PC.\n" +
@@ -665,6 +736,14 @@ private fun Ajustes(vm: JarvisVM) {
                 "• Puedes poner JARVIS como asistente: Ajustes de Android → Apps → Apps predeterminadas → Asistente digital.",
             color = TextoTenue, fontSize = 13.sp, lineHeight = 19.sp,
         )
+    }
+}
+
+@Composable
+private fun Interruptor(texto: String, valor: Boolean, alCambiar: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(texto, color = Texto, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Switch(checked = valor, onCheckedChange = alCambiar)
     }
 }
 
