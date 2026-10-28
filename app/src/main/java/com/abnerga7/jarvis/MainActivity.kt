@@ -10,14 +10,20 @@ import com.abnerga7.jarvis.ui.App
 import com.abnerga7.jarvis.ui.TemaJarvis
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        const val ACCION_ESCUCHAR = "com.abnerga7.jarvis.ESCUCHAR"
+        const val ACCION_PREGUNTAR = "com.abnerga7.jarvis.PREGUNTAR"
+        const val EXTRA_PREGUNTA = "pregunta"
+    }
+
     private val vm: JarvisVM by viewModels()
 
-    /** true cuando JARVIS se abrió con el botón/gesto de asistente del celular: empieza a escuchar. */
+    /** true cuando JARVIS se abrió para escuchar (botón de asistente o ajuste rápido). */
     private val escucharAlAbrir = mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        escucharAlAbrir.value = intent?.action == Intent.ACTION_ASSIST
+        if (savedInstanceState == null) atender(intent)
         setContent {
             TemaJarvis {
                 App(vm, escucharAlAbrir.value) { escucharAlAbrir.value = false }
@@ -27,7 +33,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action == Intent.ACTION_ASSIST) escucharAlAbrir.value = true
+        atender(intent)
+    }
+
+    private fun atender(intent: Intent?) {
+        when (intent?.action) {
+            Intent.ACTION_ASSIST, ACCION_ESCUCHAR -> escucharAlAbrir.value = true
+            ACCION_PREGUNTAR -> intent.getStringExtra(EXTRA_PREGUNTA)?.let { vm.enviar(it) }
+        }
     }
 
     override fun onResume() {
