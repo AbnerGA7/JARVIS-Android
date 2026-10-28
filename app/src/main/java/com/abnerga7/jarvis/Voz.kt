@@ -14,6 +14,10 @@ import java.util.Locale
 class Voz(contexto: Context, private val alHablar: (Boolean) -> Unit) : TextToSpeech.OnInitListener {
     private val tts = TextToSpeech(contexto.applicationContext, this)
     private var lista = false
+    var velocidad = 1.05f
+        set(valor) { field = valor; if (lista) tts.setSpeechRate(valor) }
+    var tono = 0.82f
+        set(valor) { field = valor; if (lista) tts.setPitch(valor) }
     private val pendientes = mutableListOf<String>()
 
     override fun onInit(estado: Int) {
@@ -23,8 +27,8 @@ class Voz(contexto: Context, private val alHablar: (Boolean) -> Unit) : TextToSp
             val r = tts.setLanguage(Locale.forLanguageTag(tag))
             if (r != TextToSpeech.LANG_MISSING_DATA && r != TextToSpeech.LANG_NOT_SUPPORTED) break
         }
-        tts.setPitch(0.82f)
-        tts.setSpeechRate(1.05f)
+        tts.setPitch(tono)
+        tts.setSpeechRate(velocidad)
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(id: String?) = alHablar(true)
             override fun onDone(id: String?) = alHablar(false)
